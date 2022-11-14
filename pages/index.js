@@ -6,7 +6,7 @@ import axios from "axios";
 
 export default function Home() {
   const CLIENT_ID = "ad2c7654ff92405c949de032535da426";
-  const REDIRECT_URI = "http://localhost:3000";
+  const REDIRECT_URI = "https://music-crushes.vercel.app/";
   const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
   const RESPONSE_TYPE = "token";
   const scope = "user-top-read";
