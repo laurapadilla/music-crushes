@@ -1,8 +1,83 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import Head from "next/head";
+import Image from "next/image";
+import styles from "../styles/Home.module.css";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function Home() {
+  const CLIENT_ID = "ad2c7654ff92405c949de032535da426";
+  const REDIRECT_URI = "http://localhost:3000";
+  const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
+  const RESPONSE_TYPE = "token";
+  const scope = "user-top-read";
+
+  const [token, setToken] = useState("");
+  const [tracks, setTracks] = useState([]);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    let token = window.localStorage.getItem("token");
+
+    if (!token && hash) {
+      token = hash
+        .substring(1)
+        .split("&")
+        .find((elem) => elem.startsWith("access_token"))
+        .split("=")[1];
+
+      window.location.hash = "";
+      window.localStorage.setItem("token", token);
+    }
+
+    setToken(token);
+
+    if (token) {
+      fetch(
+        "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=50&offset=0",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+        .then((response) => {
+          return response.json();
+        })
+        .then((data) => {
+          const { items } = data;
+          const tracks = items.map((track) => ({
+            id: track.id,
+            album: track.album.name,
+            albumImg: track.album.images[0],
+            artist: track.artists.map((_artist) => _artist.name).join(", "),
+            songUrl: track.external_urls.spotify,
+            title: track.name,
+          }));
+          setTracks(tracks);
+          console.log(tracks);
+        });
+    }
+  }, []);
+
+  const logout = () => {
+    setToken("");
+    window.localStorage.removeItem("token");
+  };
+
+  // const getTracks = async (e) => {
+  //   e.preventDefault();
+  //   const { data } = await axios.get(
+  //     "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=50&offset=0",
+  //     {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     }
+  //   );
+  //   console.log("hey", data);
+  //   setTracks(data.items);
+  // };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -12,60 +87,35 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
+        {!token ? (
           <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
+            href={`${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${scope}`}
           >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
+            Login with spotify
           </a>
+        ) : (
+          <button onClick={logout}>logout</button>
+        )}
 
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
+        {token ? (
+          <section>
+            {tracks.map((track) => {
+              const { id, songUrl, artist, album, albumImg, title } = track;
+              return (
+                <>
+                  <article key={id}>
+                    <h1>{title}</h1>
+                    <p>{artist}</p>
+                    <a href={songUrl}>listen to me</a>
+                  </article>
+                </>
+              );
+            })}
+          </section>
+        ) : (
+          <h2>Please login</h2>
+        )}
       </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
     </div>
-  )
+  );
 }
